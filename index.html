@@ -80,7 +80,6 @@
             moveHistory: [],
             thinking: false,
             gameStatus: '',
-            thinkingMessage: ''
         };
 
         function squareToIndex(sq) {
@@ -159,8 +158,6 @@
             const chess = gameState.chess;
 
             // Block 1
-            gameState.thinkingMessage = 'Thinking...';
-            render();
             await new Promise(r => setTimeout(r, 10));
 
             let lines = [];
@@ -405,7 +402,6 @@
             }
             
             gameState.thinking = false;
-            gameState.thinkingMessage = '';
             render();
         }
 
@@ -480,7 +476,6 @@
                 moveHistory: [],
                 thinking: false,
                 gameStatus: '',
-                thinkingMessage: ''
             };
             
             render();
@@ -499,7 +494,6 @@
                 moveHistory: [],
                 thinking: false,
                 gameStatus: '',
-                thinkingMessage: ''
             };
             render();
         }
@@ -573,7 +567,6 @@
                     <div class="game-panel">
                         <div class="status">
                             <h2>${turnText}</h2>
-                            ${gameState.thinkingMessage ? `<div class="thinking-status">${gameState.thinkingMessage}</div>` : ''}
                             ${gameState.gameStatus ? `<div class="game-status">${gameState.gameStatus}</div>` : ''}
                         </div>
                         
