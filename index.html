@@ -1,63 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <title>Chess GUI</title>
+
   <link rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.css"/>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chessboard-js/1.0.0/chessboard-1.0.0.min.js"></script>
 </head>
 
-
 <body>
+  <div id="board" style="width: 400px"></div>
 
-<h2>Chess Engine (updated)</h2>
-<div id="board"></div>
+  <script>
+    let game = new Chess();
 
-<div id="log"></div>
-
-<script>
-let boardUI;
-let game = new Chess();
-
-function onDrop(source, target) {
-  let move = game.move({
-    from: source,
-    to: target,
-    promotion: 'q'
-  });
-
-  if (move === null) return 'snapback';
-
-  fetch("http://127.0.0.1:5000/player_move", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ move: move.san })
-  });
-
-  setTimeout(engineMove, 200);
-}
-
-function engineMove() {
-  fetch("http://127.0.0.1:5000/engine_move", {
-    method: "POST"
-  })
-  .then(r => r.json())
-  .then(data => {
-    game.move(data.move);
-    boardUI.position(game.fen());
-    document.getElementById("log").innerText =
-      "Engine played: " + data.move +
-      " | think time: " + data.think_time + "s";
-  });
-}
-
-boardUI = Chessboard('board', {
-  draggable: true,
-  position: 'start',
-  onDrop: onDrop
-});
-</script>
-
+    let board = Chessboard('board', {
+      draggable: true,
+      position: 'start'
+    });
+  </script>
 </body>
 </html>
