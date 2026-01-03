@@ -159,7 +159,7 @@
             const chess = gameState.chess;
 
             // Block 1
-            gameState.thinkingMessage = 'Evaluating all moves (depth 1/5)...';
+            gameState.thinkingMessage = 'Thinking...';
             render();
             await new Promise(r => setTimeout(r, 10));
 
@@ -178,8 +178,6 @@
             console.log('Block 1:', lines.map(l => [l[0], l[1]]));
 
             // Block 2
-            gameState.thinkingMessage = 'Analyzing responses (depth 2/5)...';
-            render();
             await new Promise(r => setTimeout(r, 10));
 
             for (const line1 of lines) {
@@ -209,8 +207,6 @@
             console.log('Block 2:', lines.map(l => [l[0], l[1]]));
 
             // Block 3
-            gameState.thinkingMessage = 'Going deeper (depth 3/5)...';
-            render();
             await new Promise(r => setTimeout(r, 10));
 
             for (const line1 of lines) {
@@ -256,8 +252,6 @@
             console.log('Block 3:', lines.map(l => [l[0], l[1]]));
 
             // Block 4
-            gameState.thinkingMessage = 'Deep analysis (depth 4/5)...';
-            render();
             await new Promise(r => setTimeout(r, 10));
 
             for (const line1 of lines) {
@@ -319,8 +313,6 @@
             console.log('Block 4:', lines.map(l => [l[0], l[1]]));
 
             // Block 5
-            gameState.thinkingMessage = 'Final analysis (depth 5/5)...';
-            render();
             await new Promise(r => setTimeout(r, 10));
 
             for (const line1 of lines) {
