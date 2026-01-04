@@ -80,6 +80,7 @@
             moveHistory: [],
             thinking: false,
             gameStatus: '',
+            thinkingMessage: ''
         };
 
         function squareToIndex(sq) {
@@ -100,15 +101,98 @@
             return pieceSquareTables[piece.type]?.[index] || 0;
         }
 
+        function kingSafety(color, chess) {
+            const board = chess.board();
+            let kingPos = null;
+            
+            // Find king
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const piece = board[r][c];
+                    if (piece && piece.type === 'k' && piece.color === color) {
+                        kingPos = [r, c];
+                        break;
+                    }
+                }
+                if (kingPos) break;
+            }
+            
+            if (!kingPos) return 0.0;
+            
+            const [rank, file] = kingPos;
+            const direction = color === 'w' ? -1 : 1;
+            const shieldRank = rank + direction;
+            
+            let safety = 0.0;
+            
+            if (shieldRank < 0 || shieldRank > 7) return 0.0;
+            
+            for (const df of [-1, 0, 1]) {
+                const f = file + df;
+                if (f >= 0 && f <= 7) {
+                    const piece = board[shieldRank][f];
+                    if (piece && piece.type === 'p' && piece.color === color) {
+                        safety = 0.2;  // Note: this assigns, not adds (matching Python)
+                    }
+                }
+            }
+            
+            return safety;
+        }
+
+        function passedPawnBonus(rank, file, color, chess) {
+            const board = chess.board();
+            
+            for (const f of [file - 1, file, file + 1]) {
+                if (f >= 0 && f <= 7) {
+                    const rankStart = color === 'w' ? rank - 1 : rank + 1;
+                    const rankEnd = color === 'w' ? -1 : 8;
+                    const rankStep = color === 'w' ? -1 : 1;
+                    
+                    for (let r = rankStart; r !== rankEnd; r += rankStep) {
+                        const piece = board[r][f];
+                        if (piece && piece.type === 'p' && piece.color !== color) {
+                            return 0;
+                        }
+                    }
+                }
+            }
+            
+            return 0.3;
+        }
+
+        function bishopPair(color, chess) {
+            const board = chess.board();
+            let count = 0;
+            
+            for (let r = 0; r < 8; r++) {
+                for (let c = 0; c < 8; c++) {
+                    const piece = board[r][c];
+                    if (piece && piece.type === 'b' && piece.color === color) {
+                        count++;
+                    }
+                }
+            }
+            
+            return count >= 2;
+        }
+
         function evaluatePosition(chess, playerColor, depth = 0) {
+            // Quiescence search for captures
             if (depth > 0) {
-                const moves = chess.moves({ verbose: true });
-                const captures = moves.filter(m => m.captured || chess.in_check());
+                const allMoves = chess.moves({ verbose: true });
+                const captures = chess.in_check() ? allMoves : allMoves.filter(m => m.captured);
                 
                 if (captures.length > 0) {
-                    const evaluations = !chess.in_check() ? [evaluatePosition(chess, playerColor, 0)] : [];
+                    const evaluations = [];
+                    
+                    // Consider standing pat if not in check
+                    if (!chess.in_check()) {
+                        evaluations.push(evaluatePosition(chess, playerColor, 0));
+                    }
                     
                     for (const move of captures) {
+                        // Skip pawn captures unless in check
                         if (chess.in_check() || !move.captured || move.captured !== 'p') {
                             chess.move(move);
                             const eval = evaluatePosition(chess, playerColor, depth - 1);
@@ -123,17 +207,52 @@
                 }
             }
 
-            let evaluation = chess.turn() === playerColor ? -(Math.random() * 0.00 + 0.15) : (Math.random() * 0.00 + 0.15);
+            // Base evaluation
+            let evaluation = chess.turn() === playerColor ? -0.15 : 0.15;
 
-            if (chess.game_over()) {
-                if (chess.in_checkmate()) {
-                    return chess.turn() === playerColor ? 250 : -250;
-                }
+            if (chess.in_checkmate()) {
+                return chess.turn() === playerColor ? 250 : -250;
+            }
+
+            if (chess.in_stalemate() || chess.insufficient_material() || chess.in_threefold_repetition()) {
                 return 0;
             }
 
+            // King safety
+            evaluation += kingSafety(playerColor === 'w' ? 'b' : 'w', chess);
+            evaluation -= kingSafety(playerColor, chess);
+
+            // Doubled pawns penalty
             const board = chess.board();
-            
+            for (const color of ['w', 'b']) {
+                for (let file = 0; file < 8; file++) {
+                    let pawnsInFile = 0;
+                    for (let r = 0; r < 8; r++) {
+                        const piece = board[r][file];
+                        if (piece && piece.type === 'p' && piece.color === color) {
+                            pawnsInFile++;
+                        }
+                    }
+                    if (pawnsInFile > 1) {
+                        const penalty = (pawnsInFile - 1) * 0.5;
+                        if (color === playerColor) {
+                            evaluation += penalty;  // Penalty for player's doubled pawns
+                        } else {
+                            evaluation -= penalty;  // Penalty for opponent's doubled pawns
+                        }
+                    }
+                }
+            }
+
+            // Bishop pair
+            if (bishopPair(playerColor === 'w' ? 'b' : 'w', chess)) {
+                evaluation += 0.3;
+            }
+            if (bishopPair(playerColor, chess)) {
+                evaluation -= 0.3;
+            }
+
+            // Piece values, positioning, and control
             for (let r = 0; r < 8; r++) {
                 for (let c = 0; c < 8; c++) {
                     const piece = board[r][c];
@@ -146,6 +265,12 @@
 
                         const multiplier = piece.color === playerColor ? -1 : 1;
                         evaluation += multiplier * (value + psqValue + controlValue);
+
+                        // Passed pawn bonus
+                        if (piece.type === 'p') {
+                            const bonus = passedPawnBonus(r, c, piece.color, chess);
+                            evaluation += multiplier * bonus;
+                        }
                     }
                 }
             }
@@ -158,6 +283,8 @@
             const chess = gameState.chess;
 
             // Block 1
+            gameState.thinkingMessage = 'Evaluating all moves (depth 1/5)...';
+            render();
             await new Promise(r => setTimeout(r, 10));
 
             let lines = [];
@@ -175,6 +302,8 @@
             console.log('Block 1:', lines.map(l => [l[0], l[1]]));
 
             // Block 2
+            gameState.thinkingMessage = 'Analyzing responses (depth 2/5)...';
+            render();
             await new Promise(r => setTimeout(r, 10));
 
             for (const line1 of lines) {
@@ -204,6 +333,8 @@
             console.log('Block 2:', lines.map(l => [l[0], l[1]]));
 
             // Block 3
+            gameState.thinkingMessage = 'Going deeper (depth 3/5)...';
+            render();
             await new Promise(r => setTimeout(r, 10));
 
             for (const line1 of lines) {
@@ -249,6 +380,8 @@
             console.log('Block 3:', lines.map(l => [l[0], l[1]]));
 
             // Block 4
+            gameState.thinkingMessage = 'Deep analysis (depth 4/5)...';
+            render();
             await new Promise(r => setTimeout(r, 10));
 
             for (const line1 of lines) {
@@ -310,6 +443,8 @@
             console.log('Block 4:', lines.map(l => [l[0], l[1]]));
 
             // Block 5
+            gameState.thinkingMessage = 'Final analysis (depth 5/5)...';
+            render();
             await new Promise(r => setTimeout(r, 10));
 
             for (const line1 of lines) {
@@ -402,6 +537,7 @@
             }
             
             gameState.thinking = false;
+            gameState.thinkingMessage = '';
             render();
         }
 
@@ -476,6 +612,7 @@
                 moveHistory: [],
                 thinking: false,
                 gameStatus: '',
+                thinkingMessage: ''
             };
             
             render();
@@ -494,6 +631,7 @@
                 moveHistory: [],
                 thinking: false,
                 gameStatus: '',
+                thinkingMessage: ''
             };
             render();
         }
@@ -567,6 +705,7 @@
                     <div class="game-panel">
                         <div class="status">
                             <h2>${turnText}</h2>
+                            ${gameState.thinkingMessage ? `<div class="thinking-status">${gameState.thinkingMessage}</div>` : ''}
                             ${gameState.gameStatus ? `<div class="game-status">${gameState.gameStatus}</div>` : ''}
                         </div>
                         
