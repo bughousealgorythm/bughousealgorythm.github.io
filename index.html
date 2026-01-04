@@ -177,89 +177,69 @@
             return sum >= 2;
         }
 
-const FILE_A = 0;
-const FILE_H = 7;
+function squareToIndex(square) {
+    const file = square.charCodeAt(0) - 97;
+    const rank = parseInt(square[1], 10) - 1;
+    return rank * 8 + file;
+}
 
-function fileOf(sq) { return sq % 8; }
-function rankOf(sq) { return Math.floor(sq / 8); }
+function indexToSquare(index) {
+    const file = String.fromCharCode(97 + (index % 8));
+    const rank = Math.floor(index / 8) + 1;
+    return file + rank;
+}
 
-function onBoard(sq) {
-    return sq >= 0 && sq < 64;
-}        
-        
 function getAttacksFromSquare(square, piece, chess) {
     const attacks = new Set();
+    const start = squareToIndex(square);
 
-    const color = piece.color;
-    const type = piece.type;
+    const fileOf = sq => sq % 8;
+    const onBoard = sq => sq >= 0 && sq < 64;
 
-    const add = sq => {
-        if (onBoard(sq)) attacks.add(sq);
-    };
+    const add = sq => attacks.add(indexToSquare(sq));
 
-    const slide = (directions) => {
-        for (const d of directions) {
-            let sq = square + d;
+    const slide = dirs => {
+        for (const d of dirs) {
+            let sq = start + d;
             while (onBoard(sq)) {
-                // file wrap prevention
                 const f0 = fileOf(sq - d);
                 const f1 = fileOf(sq);
-                if (Math.abs(f0 - f1) > 1 && (d === 1 || d === -1 || d === 9 || d === -9 || d === 7 || d === -7)) {
-                    break;
-                }
+                if (Math.abs(f0 - f1) > 1) break;
 
                 add(sq);
-
-                if (chess.get(sq)) break; // stop at first blocker
+                if (chess.get(indexToSquare(sq))) break;
                 sq += d;
             }
         }
     };
 
-    switch (type) {
+    switch (piece.type) {
         case 'p': {
-            const dir = color === 'w' ? 1 : -1;
-            const r = rankOf(square);
-            const f = fileOf(square);
-
-            if (f > FILE_A) add(square + dir * 8 - 1);
-            if (f < FILE_H) add(square + dir * 8 + 1);
+            const dir = piece.color === 'w' ? 8 : -8;
+            const f = fileOf(start);
+            if (f > 0) add(start + dir - 1);
+            if (f < 7) add(start + dir + 1);
             break;
         }
-
-        case 'n': {
-            const jumps = [17, 15, 10, 6, -6, -10, -15, -17];
-            for (const j of jumps) {
-                const to = square + j;
-                if (!onBoard(to)) continue;
-                if (Math.abs(fileOf(square) - fileOf(to)) <= 2)
-                    add(to);
-            }
-            break;
-        }
-
-        case 'b':
-            slide([9, 7, -7, -9]);
+        case 'n':
+            [17, 15, 10, 6, -6, -10, -15, -17].forEach(d => {
+                const sq = start + d;
+                if (onBoard(sq) && Math.abs(fileOf(start) - fileOf(sq)) <= 2)
+                    add(sq);
+            });
             break;
 
-        case 'r':
-            slide([8, -8, 1, -1]);
-            break;
+        case 'b': slide([9, 7, -7, -9]); break;
+        case 'r': slide([8, -8, 1, -1]); break;
+        case 'q': slide([8, -8, 1, -1, 9, 7, -7, -9]); break;
 
-        case 'q':
-            slide([8, -8, 1, -1, 9, 7, -7, -9]);
+        case 'k':
+            [8, -8, 1, -1, 9, 7, -7, -9].forEach(d => {
+                const sq = start + d;
+                if (onBoard(sq) && Math.abs(fileOf(start) - fileOf(sq)) <= 1)
+                    add(sq);
+            });
             break;
-
-        case 'k': {
-            const deltas = [8, -8, 1, -1, 9, 7, -7, -9];
-            for (const d of deltas) {
-                const to = square + d;
-                if (!onBoard(to)) continue;
-                if (Math.abs(fileOf(square) - fileOf(to)) <= 1)
-                    add(to);
-            }
-            break;
-        }
     }
 
     return attacks;
