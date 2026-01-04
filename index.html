@@ -178,24 +178,78 @@
         }
 
         function getAttacksFromSquare(square, piece, chess) {
-            // Get attacks regardless of turn by temporarily switching if needed
-            const currentTurn = chess.turn();
-            const needSwitch = piece.color !== currentTurn;
-            
-            if (needSwitch) {
-                // Manually switch turn to get moves
-                const fen = chess.fen();
-                const parts = fen.split(' ');
-                parts[1] = piece.color; // Change active color
-                const modifiedFen = parts.join(' ');
-                const tempChess = new Chess(modifiedFen);
-                const moves = tempChess.moves({ square: square, verbose: true });
-                return moves.length;
-            } else {
-                const moves = chess.moves({ square: square, verbose: true });
-                return moves.length;
+    const board = chess.board();
+    const { rank, file } = squareToIndex(square);
+    let attacks = 0;
+
+    function inBounds(r, f) {
+        return r >= 0 && r < 8 && f >= 0 && f < 8;
+    }
+
+    function isBlocked(r, f) {
+        return board[r][f] !== null;
+    }
+
+    // Pawn attacks (capture squares only)
+    if (piece.type === 'p') {
+        const dir = piece.color === 'w' ? -1 : 1;
+        for (const df of [-1, 1]) {
+            const r = rank + dir;
+            const f = file + df;
+            if (inBounds(r, f)) attacks++;
+        }
+    }
+
+    // Knight attacks
+    else if (piece.type === 'n') {
+        const deltas = [
+            [2, 1], [2, -1], [-2, 1], [-2, -1],
+            [1, 2], [1, -2], [-1, 2], [-1, -2]
+        ];
+        for (const [dr, df] of deltas) {
+            const r = rank + dr;
+            const f = file + df;
+            if (inBounds(r, f)) attacks++;
+        }
+    }
+
+    // Bishop / Rook / Queen (sliding pieces)
+    else if (piece.type === 'b' || piece.type === 'r' || piece.type === 'q') {
+        const directions = [];
+
+        if (piece.type !== 'r') {
+            directions.push([1, 1], [1, -1], [-1, 1], [-1, -1]);
+        }
+        if (piece.type !== 'b') {
+            directions.push([1, 0], [-1, 0], [0, 1], [0, -1]);
+        }
+
+        for (const [dr, df] of directions) {
+            let r = rank + dr;
+            let f = file + df;
+            while (inBounds(r, f)) {
+                attacks++;
+                if (isBlocked(r, f)) break;
+                r += dr;
+                f += df;
             }
         }
+    }
+
+    // King attacks
+    else if (piece.type === 'k') {
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let df = -1; df <= 1; df++) {
+                if (dr === 0 && df === 0) continue;
+                const r = rank + dr;
+                const f = file + df;
+                if (inBounds(r, f)) attacks++;
+            }
+        }
+    }
+
+    return attacks;
+}
 
         function evaluatePosition(chess, playerColor, depth = 0) {
             // Quiescence search for captures
