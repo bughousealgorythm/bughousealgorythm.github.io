@@ -348,7 +348,7 @@ function getAttacksFromSquare(square, piece, chess) {
                         const sq = indexToSquare(r, c);
                         const value = pieceValues[piece.type];
                         const psqValue = getPieceSquareValue(piece, sq);
-                        const attackCount = getAttacksFromSquare(sq, piece, chess);
+                        const attackCount = getAttacksFromSquare(sq, piece, chess).size;
                         const controlValue = controlMultipliers[piece.type] * attackCount;
 
                         const multiplier = piece.color === playerColor ? -1 : 1;
