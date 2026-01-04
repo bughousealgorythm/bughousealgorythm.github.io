@@ -284,7 +284,7 @@
                         const controlValue = controlMultipliers[piece.type] * attackCount;
 
                         const multiplier = piece.color === playerColor ? -1 : 1;
-                        evaluation += multiplier * (value + psqValue); // + controlValue
+                        evaluation += multiplier * (value + psqValue + controlValue); 
 
                         // Passed pawn bonus
                         if (piece.type === 'p') {
