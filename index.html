@@ -219,8 +219,8 @@
             }
 
             // King safety
-            evaluation += kingSafety(playerColor === 'w' ? 'b' : 'w', chess);
-            evaluation -= kingSafety(playerColor, chess);
+            // evaluation += kingSafety(playerColor === 'w' ? 'b' : 'w', chess);
+            // evaluation -= kingSafety(playerColor, chess);
 
             // Doubled pawns penalty
             const board = chess.board();
@@ -236,9 +236,9 @@
                     if (pawnsInFile > 1) {
                         const penalty = (pawnsInFile - 1) * 0.5;
                         if (color === playerColor) {
-                            evaluation += penalty;  // Penalty for player's doubled pawns
+                            // evaluation += penalty;  // Penalty for player's doubled pawns
                         } else {
-                            evaluation -= penalty;  // Penalty for opponent's doubled pawns
+                            // evaluation -= penalty;  // Penalty for opponent's doubled pawns
                         }
                     }
                 }
@@ -246,10 +246,10 @@
 
             // Bishop pair
             if (bishopPair(playerColor === 'w' ? 'b' : 'w', chess)) {
-                evaluation += 0.3;
+                // evaluation += 0.3;
             }
             if (bishopPair(playerColor, chess)) {
-                evaluation -= 0.3;
+                // evaluation -= 0.3;
             }
 
             // Piece values, positioning, and control
@@ -269,7 +269,7 @@
                         // Passed pawn bonus
                         if (piece.type === 'p') {
                             const bonus = passedPawnBonus(r, c, piece.color, chess);
-                            evaluation += multiplier * bonus;
+                            // evaluation += multiplier * bonus;
                         }
                     }
                 }
