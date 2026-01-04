@@ -132,7 +132,7 @@
                 if (f >= 0 && f <= 7) {
                     const piece = board[shieldRank][f];
                     if (piece && piece.type === 'p' && piece.color === color) {
-                        safety += 0.2;  // Adds 0.2 for each pawn in shield
+                        safety += 0.2;  // Add 0.2 for each pawn
                     }
                 }
             }
@@ -175,6 +175,26 @@
             }
             
             return sum >= 2;
+        }
+
+        function getAttacksFromSquare(square, piece, chess) {
+            // Get attacks regardless of turn by temporarily switching if needed
+            const currentTurn = chess.turn();
+            const needSwitch = piece.color !== currentTurn;
+            
+            if (needSwitch) {
+                // Manually switch turn to get moves
+                const fen = chess.fen();
+                const parts = fen.split(' ');
+                parts[1] = piece.color; // Change active color
+                const modifiedFen = parts.join(' ');
+                const tempChess = new Chess(modifiedFen);
+                const moves = tempChess.moves({ square: square, verbose: true });
+                return moves.length;
+            } else {
+                const moves = chess.moves({ square: square, verbose: true });
+                return moves.length;
+            }
         }
 
         function evaluatePosition(chess, playerColor, depth = 0) {
@@ -236,7 +256,7 @@
                     if (pawnsInFile > 1) {
                         const penalty = (pawnsInFile - 1) * 0.5;
                         if (color === playerColor) {
-                             evaluation += penalty;  // Penalty for player's doubled pawns
+                            evaluation += penalty;  // Penalty for player's doubled pawns
                         } else {
                             evaluation -= penalty;  // Penalty for opponent's doubled pawns
                         }
@@ -260,8 +280,8 @@
                         const sq = indexToSquare(r, c);
                         const value = pieceValues[piece.type];
                         const psqValue = getPieceSquareValue(piece, sq);
-                        const moves = chess.moves({ square: sq, verbose: true });
-                        const controlValue = controlMultipliers[piece.type] * moves.length;
+                        const attackCount = getAttacksFromSquare(sq, piece, chess);
+                        const controlValue = controlMultipliers[piece.type] * attackCount;
 
                         const multiplier = piece.color === playerColor ? -1 : 1;
                         evaluation += multiplier * (value + psqValue + controlValue);
