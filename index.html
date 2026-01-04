@@ -132,7 +132,7 @@
                 if (f >= 0 && f <= 7) {
                     const piece = board[shieldRank][f];
                     if (piece && piece.type === 'p' && piece.color === color) {
-                        safety = 0.2;  // Assigns 0.2 if ANY pawn is in shield
+                        safety += 0.2;  // Adds 0.2 for each pawn in shield
                     }
                 }
             }
