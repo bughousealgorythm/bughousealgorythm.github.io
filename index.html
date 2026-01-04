@@ -177,74 +177,88 @@
             return sum >= 2;
         }
 
+const FILE_A = 0;
+const FILE_H = 7;
+
+function fileOf(sq) { return sq % 8; }
+function rankOf(sq) { return Math.floor(sq / 8); }
+
+function onBoard(sq) {
+    return sq >= 0 && sq < 64;
+}        
+        
 function getAttacksFromSquare(square, piece, chess) {
-    const board = chess.board();
-    const { rank, file } = squareToIndex(square);
-    let attacks = 0;
+    const attacks = new Set();
 
-    function inBounds(r, f) {
-        return r >= 0 && r < 8 && f >= 0 && f < 8;
-    }
+    const color = piece.color;
+    const type = piece.type;
 
-    function isBlocked(r, f) {
-        return board[r][f] !== null;
-    }
+    const add = sq => {
+        if (onBoard(sq)) attacks.add(sq);
+    };
 
-    // Pawn attacks (capture squares only)
-    if (piece.type === 'p') {
-        const dir = piece.color === 'w' ? -1 : 1;
-        for (const df of [-1, 1]) {
-            const r = rank + dir;
-            const f = file + df;
-            if (inBounds(r, f)) attacks++;
-        }
-    }
+    const slide = (directions) => {
+        for (const d of directions) {
+            let sq = square + d;
+            while (onBoard(sq)) {
+                // file wrap prevention
+                const f0 = fileOf(sq - d);
+                const f1 = fileOf(sq);
+                if (Math.abs(f0 - f1) > 1 && (d === 1 || d === -1 || d === 9 || d === -9 || d === 7 || d === -7)) {
+                    break;
+                }
 
-    // Knight attacks
-    else if (piece.type === 'n') {
-        const deltas = [
-            [2, 1], [2, -1], [-2, 1], [-2, -1],
-            [1, 2], [1, -2], [-1, 2], [-1, -2]
-        ];
-        for (const [dr, df] of deltas) {
-            const r = rank + dr;
-            const f = file + df;
-            if (inBounds(r, f)) attacks++;
-        }
-    }
+                add(sq);
 
-    // Bishop / Rook / Queen (sliding pieces)
-    else if (piece.type === 'b' || piece.type === 'r' || piece.type === 'q') {
-        const directions = [];
-
-        if (piece.type !== 'r') {
-            directions.push([1, 1], [1, -1], [-1, 1], [-1, -1]);
-        }
-        if (piece.type !== 'b') {
-            directions.push([1, 0], [-1, 0], [0, 1], [0, -1]);
-        }
-
-        for (const [dr, df] of directions) {
-            let r = rank + dr;
-            let f = file + df;
-            while (inBounds(r, f)) {
-                attacks++;
-                if (isBlocked(r, f)) break;
-                r += dr;
-                f += df;
+                if (chess.get(sq)) break; // stop at first blocker
+                sq += d;
             }
         }
-    }
+    };
 
-    // King attacks
-    else if (piece.type === 'k') {
-        for (let dr = -1; dr <= 1; dr++) {
-            for (let df = -1; df <= 1; df++) {
-                if (dr === 0 && df === 0) continue;
-                const r = rank + dr;
-                const f = file + df;
-                if (inBounds(r, f)) attacks++;
+    switch (type) {
+        case 'p': {
+            const dir = color === 'w' ? 1 : -1;
+            const r = rankOf(square);
+            const f = fileOf(square);
+
+            if (f > FILE_A) add(square + dir * 8 - 1);
+            if (f < FILE_H) add(square + dir * 8 + 1);
+            break;
+        }
+
+        case 'n': {
+            const jumps = [17, 15, 10, 6, -6, -10, -15, -17];
+            for (const j of jumps) {
+                const to = square + j;
+                if (!onBoard(to)) continue;
+                if (Math.abs(fileOf(square) - fileOf(to)) <= 2)
+                    add(to);
             }
+            break;
+        }
+
+        case 'b':
+            slide([9, 7, -7, -9]);
+            break;
+
+        case 'r':
+            slide([8, -8, 1, -1]);
+            break;
+
+        case 'q':
+            slide([8, -8, 1, -1, 9, 7, -7, -9]);
+            break;
+
+        case 'k': {
+            const deltas = [8, -8, 1, -1, 9, 7, -7, -9];
+            for (const d of deltas) {
+                const to = square + d;
+                if (!onBoard(to)) continue;
+                if (Math.abs(fileOf(square) - fileOf(to)) <= 1)
+                    add(to);
+            }
+            break;
         }
     }
 
